@@ -27,7 +27,8 @@ cross-language broker, Node.js, browser, HTTP server, central marketplace or run
 
 ## Quick start: Python
 
-Prerequisites: Python 3.10+ and `uv` on `PATH` (AppShell creates one uv environment per
+Install from PyPI with `uv tool install nativehtmlkit-appshell` (then `appshell run`), or work from
+this checkout as below. Prerequisites: Python 3.10+ and `uv` on `PATH` (AppShell creates one uv environment per
 extension). `nativehtmlkit` 0.1.2 and `nativehtmlkit-ui` 0.1.1 are installed as dependencies and
 bring the native host. From `python/`:
 
@@ -60,6 +61,10 @@ Prerequisites: the `NativeHTMLKit` (0.1.2) and `NativeHTMLKit.UI` (0.1.1) module
 No Python or uv required. On Linux run with PowerShell 7; on Windows use PowerShell 7 or 5.1.
 Gallery-sourced extensions need PSResourceGet (or PowerShellGet with the NuGet provider on 5.1);
 set `APPSHELL_PS_REPOSITORY` to use a registered repository other than `PSGallery`.
+
+Install from the PowerShell Gallery (brings `NativeHTMLKit` and `NativeHTMLKit.UI`):
+`Install-PSResource NativeHTMLKit.AppShell` (or `Install-Module` on Windows PowerShell 5.1), then
+`Start-AppShell`. From this checkout:
 
 ```powershell
 Import-Module ./powershell/NativeHTMLKit.AppShell/NativeHTMLKit.AppShell.psd1 -Force

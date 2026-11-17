@@ -3,7 +3,7 @@ BeforeAll {
     Import-Module (Join-Path $PSScriptRoot '../NativeHTMLKit.AppShell/NativeHTMLKit.AppShell.psd1') -Force
 }
 Describe 'PowerShell AppShell: module and contract' {
-    It 'imports without loading Python or NativeHTMLKit UI' {
+    It 'imports without Python (SDK and UI are declared RequiredModules)' {
         (Get-Command New-AppShellExtension -ErrorAction Stop).Name | Should -Be 'New-AppShellExtension'
     }
     It 'generates a real PowerShell module' {

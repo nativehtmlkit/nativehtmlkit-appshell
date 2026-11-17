@@ -13,6 +13,11 @@ license-files = ["LICENSE"]
 authors = [{name = "NativeHTMLKit contributors"}]
 dependencies = ["nativehtmlkit>=0.1.2,<0.2", "nativehtmlkit-ui>=0.1.1,<0.2"]
 
+[project.urls]
+Homepage = "https://github.com/nativehtmlkit/nativehtmlkit-appshell"
+Documentation = "https://github.com/nativehtmlkit/nativehtmlkit-appshell/blob/main/README.md"
+Issues = "https://github.com/nativehtmlkit/nativehtmlkit-appshell/issues"
+
 [project.scripts]
 appshell = "nativehtmlkit_appshell.cli:main"
 
