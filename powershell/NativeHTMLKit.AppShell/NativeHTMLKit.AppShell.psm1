@@ -3,6 +3,7 @@
 Set-StrictMode -Version 1.0
 $ErrorActionPreference = 'Stop'
 $script:AppShellModuleRoot = $PSScriptRoot
+$script:AppShellVersion = '0.1.0'
 foreach ($file in @('Storage.ps1','Contract.ps1','Worker.ps1','Install.ps1','Scaffold.ps1','Shell.ps1')) {
     . (Join-Path $PSScriptRoot ('Private/' + $file))
 }
