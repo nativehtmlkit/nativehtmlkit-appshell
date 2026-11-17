@@ -450,3 +450,28 @@ def test_stage_dot_source_and_cli_doctor(store, tmp_path, monkeypatch, capsys):
     store.registry_path.write_text(json.dumps({"version": 1, "extensions": {"x.y": {"release": "../../etc"}}}))
     assert main(["--home", str(store.home), "doctor"]) == 1
     assert "Invalid release record" in capsys.readouterr().err
+
+
+def test_pinned_package_source_installs_exact_version_from_index(store, tmp_path, monkeypatch):
+    """name==version through uv, served by a local find-links index (no network, no code seam)."""
+    index = tmp_path / "index"
+    for version in ("0.1.0", "0.2.0"):
+        _wheel(_project(tmp_path, "org.example.chaos", CHAOS, version), index)
+    monkeypatch.setenv("UV_FIND_LINKS", str(index))
+    monkeypatch.setenv("UV_NO_INDEX", "1")
+    dist = "appshell-ext-org-example-chaos"
+    store.stage(f"{dist}==0.1.0")
+    r = AppShellRuntime(store); r.boot(); r.stop()
+    record = r.registry["extensions"]["org.example.chaos"]
+    assert record["version"] == "0.1.0" and record["source"] == {"kind": "package", "value": f"{dist}==0.1.0",
+                                                               "fingerprint": f"{dist}==0.1.0"}
+    store.stage(f"{dist}==0.1.0")  # same pinned source again: no new environment
+    r = AppShellRuntime(store); r.boot(); r.stop()
+    assert r.registry["extensions"]["org.example.chaos"]["release"] == record["release"]
+    store.stage(f"{dist}==9.9.9")  # not in the index: fails, installed release untouched
+    r = AppShellRuntime(store); r.boot(); r.stop()
+    assert r.registry["extensions"]["org.example.chaos"]["release"] == record["release"]
+    assert any("Package command failed" in e for e in r.errors.values()), r.errors
+    store.stage(f"{dist}==0.2.0")
+    r = AppShellRuntime(store); r.boot(); r.stop()
+    assert r.registry["extensions"]["org.example.chaos"]["version"] == "0.2.0"
