@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nativehtmlkit-appshell"
+version = "0.1.0"
+description = "NativeHTMLKit AppShell: a minimal Python desktop application with native package extensions"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "NativeHTMLKit contributors"}]
+dependencies = ["nativehtmlkit>=0.1.2,<0.2", "nativehtmlkit-ui>=0.1.1,<0.2"]
+
+[project.scripts]
+appshell = "nativehtmlkit_appshell.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+nativehtmlkit_appshell = ["resources/*.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires local uv and an offline-capable wheel builder"]

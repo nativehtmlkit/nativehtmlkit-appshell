@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "appshell-ext-org-nativehtmlkit-examples-greeter"
+version = "0.1.0"
+description = "Python Greeter extension for NativeHTMLKit AppShell"
+requires-python = ">=3.10"
+
+[project.entry-points."nativehtmlkit.appshell.extensions"]
+"org.nativehtmlkit.examples.greeter" = "appshell_org_nativehtmlkit_examples_greeter:Extension"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,31 @@
+{
+  "api_version": 2,
+  "id": "org.example.hello",
+  "title": "Hello and Diagnostics",
+  "version": "0.1.0",
+  "description": "Minimal extension contract fixture",
+  "platforms": [
+    "linux",
+    "windows"
+  ],
+  "pages": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "order": 10
+    }
+  ],
+  "commands": [
+    {
+      "id": "refresh",
+      "title": "Refresh",
+      "risk": "read"
+    },
+    {
+      "id": "restart_service",
+      "title": "Restart demo service",
+      "risk": "destructive",
+      "confirmation": "Restart the selected demo service?"
+    }
+  ]
+}

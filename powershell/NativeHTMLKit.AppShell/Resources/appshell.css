@@ -1,0 +1,49 @@
+/* AppShell-only styles. No modifications to NativeHTMLKit UI or Core. */
+.nhk-app { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+.as-layout { display: flex; min-height: 570px; width: 100%; gap: 0; }
+.as-sidebar { width: 218px; min-width: 205px; background: #192438; padding: 20px 14px; border-right: 1px solid #36465b; }
+.as-sidebar .nhk-button { display: block; width: 100%; text-align: left; margin: 3px 0; }
+.as-brand { font-size: 17px; letter-spacing: .3px; font-weight: 750; margin: 0 0 18px; color: #f2f6fd; }
+.as-nav { margin-top: 16px; }
+.as-nav-label { font-size: 10px; color: #879db8; text-transform: uppercase; letter-spacing: 1.3px; padding: 12px 10px 7px; }
+.as-nav-link { width: 100%; text-align: left; font-size: 12px; color: #bbcee7; background: none; border: 0; border-radius: 6px; padding: 8px 10px; margin: 1px 0; cursor: pointer; }
+.as-nav-link:hover, .as-nav-link.active { background: #2a3c56; color: #f9fbff; }
+.as-content-shell { flex: 1; min-width: 350px; padding: 22px 28px; background: #202d40; }
+.as-toolbar { padding-bottom: 17px; border-bottom: 1px solid #394a5f; margin-bottom: 21px; }
+.as-content { min-height: 380px; }
+.as-heading { margin: 10px 0 14px; color: #f2f6fe; font-size: 20px; }
+.as-text { color: #d4deed; margin: 7px 0; }
+.as-caption, .as-code { color: #9aacc5; font-size: 12px; }
+.as-code { white-space: pre-wrap; background: #17243a; padding: 10px 13px; border-radius: 6px; }
+.as-badge { color: #cbdfff; background: #314968; border-radius: 12px; padding: 3px 9px; font-size: 11px; }
+.as-notice { background: #2a405c; border-left: 3px solid #70a6ec; border-radius: 6px; padding: 10px 13px; margin: 10px 0; }
+.as-notice-danger { border-left-color: #e97b89; } .as-notice-warning { border-left-color: #dda759; }
+.as-card { background: #28374b; border: 1px solid #3d526b; border-radius: 9px; padding: 14px; margin: 9px 0; }
+.as-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.as-column { display: flex; flex-direction: column; gap: 9px; }
+.as-divider { border: 0; border-top: 1px solid #41536b; margin: 15px 0; }
+.as-field { display: flex; flex-direction: column; gap: 5px; margin: 12px 0; max-width: 620px; }
+.as-field-label { font-size: 12px; color: #c7d5e9; }
+.as-field input, .as-field textarea, .as-field select, #as-new-source { width: 100%; box-sizing: border-box; background: #152236; color: #ecf4ff; border: 1px solid #4a6280; border-radius: 6px; padding: 8px 9px; }
+.as-field textarea { min-height: 86px; }
+.as-button { background: #3a6db2; border: 1px solid #568cd1; color: #fff; border-radius: 6px; padding: 8px 13px; margin: 8px 7px 8px 0; cursor: pointer; }
+.as-button:hover { background: #477ec3; }
+.as-table-wrap { overflow: auto; border: 1px solid #40526b; border-radius: 7px; }
+.as-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.as-table th { text-align: left; font-weight: 600; color: #a9c3e7; background: #273953; }
+.as-table th, .as-table td { padding: 8px 10px; border-bottom: 1px solid #3a4b61; }
+.as-table tbody tr:nth-child(even) { background: #243248; }
+.as-extension { border: 1px solid #3e5067; padding: 12px; margin: 8px 0; border-radius: 8px; }
+.as-meta { color: #90a9c8; font-size: 11px; }
+.as-footer { padding: 11px 20px; border-top: 1px solid #34455a; background: #192538; }
+#as-confirm { background: #25354b; color: #edf4ff; padding: 22px; border: 1px solid #6384a8; border-radius: 9px; width: 440px; }
+@media (max-width: 710px) { .as-sidebar { min-width: 125px; width: 145px; padding: 13px 8px; } .as-content-shell { padding: 15px; min-width: 200px; } }
+
+/* PowerShell edition emits equivalent minimal class names. */
+.as-nav-heading { font-size: 10px; color: #879db8; text-transform: uppercase; letter-spacing: 1.3px; padding: 12px 10px 7px; }
+.as-nav-item { display:block; width:100%; text-align:left; font-size:12px; color:#bbcee7; background:none; border:0; border-radius:6px; padding:8px 10px; margin:1px 0; cursor:pointer; }
+.as-nav-item:hover { background:#2a3c56; color:#f9fbff; }
+.as-muted { color:#9aacc5; font-size:12px; }
+.as-notice.as-danger { border-left-color:#e97b89; }
+.as-notice.as-warning { border-left-color:#dda759; }
+#as-source { width:100%; box-sizing:border-box; background:#152236; color:#ecf4ff; border:1px solid #4a6280; border-radius:6px; padding:8px 9px; }

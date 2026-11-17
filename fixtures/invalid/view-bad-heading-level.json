@@ -1,0 +1,114 @@
+{
+  "title": "Overview",
+  "blocks": [
+    {
+      "kind": "heading",
+      "text": "Welcome",
+      "level": 7
+    },
+    {
+      "kind": "caption",
+      "text": "A compact page supplied by either language"
+    },
+    {
+      "kind": "card",
+      "children": [
+        {
+          "kind": "text",
+          "text": "Status: ready"
+        },
+        {
+          "kind": "notice",
+          "text": "This is a safe static fixture",
+          "tone": "info"
+        }
+      ]
+    },
+    {
+      "kind": "row",
+      "children": [
+        {
+          "kind": "input",
+          "name": "filter",
+          "label": "Filter",
+          "value": ""
+        },
+        {
+          "kind": "select",
+          "name": "scope",
+          "label": "Scope",
+          "value": "local",
+          "options": [
+            {
+              "label": "Local",
+              "value": "local"
+            },
+            {
+              "label": "Remote",
+              "value": "remote"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "checkbox",
+      "name": "force",
+      "label": "Force restart",
+      "checked": false
+    },
+    {
+      "kind": "textarea",
+      "name": "notes",
+      "label": "Notes",
+      "value": ""
+    },
+    {
+      "kind": "table",
+      "columns": [
+        {
+          "key": "name",
+          "title": "Name"
+        },
+        {
+          "key": "status",
+          "title": "Status"
+        }
+      ],
+      "rows": [
+        {
+          "name": "Worker A",
+          "status": "ready"
+        },
+        {
+          "name": "Worker B",
+          "status": null
+        }
+      ]
+    },
+    {
+      "kind": "code",
+      "text": "uptime: 42s"
+    },
+    {
+      "kind": "divider"
+    },
+    {
+      "kind": "button",
+      "text": "Refresh",
+      "command": "refresh"
+    },
+    {
+      "kind": "button",
+      "text": "Restart demo service",
+      "command": "restart_service",
+      "params": {
+        "service": "demo"
+      }
+    },
+    {
+      "kind": "badge",
+      "text": "example"
+    }
+  ]
+}
