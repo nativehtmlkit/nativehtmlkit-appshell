@@ -29,7 +29,7 @@ commit on which the real-input runs were made (`git diff` limited to docs and pa
 | Real-input GUI, Python | `qualification/gui/driver.py`, 26 checks | — | 26/26 (ydotool via KWin) | 26/26 (SendInput, RDP desktop) |
 | Real-input GUI, PowerShell 7.7 | 26 checks | — | 26/26 | 26/26 |
 | Real-input GUI, Windows PowerShell 5.1 | 26 checks | — | n/a | 26/26 |
-| Built wheel in a fresh venv | headless desktop scenario + lifecycle from the installed wheel | 24/24 | — | — |
+| Built wheel in a fresh venv | headless desktop scenario + lifecycle from the installed wheel | 25/25 | — | — |
 | Built module zip, extracted elsewhere | PowerShell suite against the extracted module | 38/38 | — | — |
 | Real PowerShell Gallery download | pinned non-AppShell module (`NativeHTMLKit.Demo==0.1.0`): downloaded, rejected as "no AppShell manifest", existing extension stays active, no candidate left | — | — | PASS on 5.1 (`Save-Module`) and 7.7 (`Save-PSResource`) |
 
