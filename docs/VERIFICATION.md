@@ -1,7 +1,8 @@
 # AppShell 0.1.0 — verification evidence
 
-**Status (2026-11-17): release candidate, qualified on Linux KDE Plasma Wayland and Windows Server
-2022 for both editions. Not tagged, not published.** Everything below was executed; nothing is
+**Status (2026-11-17): 0.1.0, qualified on Linux KDE Plasma Wayland and Windows Server 2022 for both
+editions; released as GitHub tag `v0.1.0`, PyPI `nativehtmlkit-appshell` and PowerShell Gallery
+`NativeHTMLKit.AppShell`.** Everything below was executed; nothing is
 claimed from source inspection. Raw logs, screenshots and accessibility-tree dumps are kept with the
 project's private qualification records, not in this repository.
 
@@ -16,8 +17,10 @@ project's private qualification records, not in this repository.
 | Linux desktop VM | Ubuntu 26.04, KDE Plasma 6.6 native Wayland, Python 3.14.4, uv 0.13.8, PowerShell 7.7.0, Pester 5.9.0 |
 | Windows VM | Windows Server 2022 (20348), Python 3.13.18 (uv-managed), uv 0.13.8, Windows PowerShell 5.1.20348.5773, PowerShell 7.7.0, Pester 5.7.1, PowerShellGet 1.0.0.1 (+ PSResourceGet 1.1.1 where stated) |
 
-Source: `main` at the commit that adds this file; product and harness code identical to the
-commit on which the real-input runs were made (`git diff` limited to docs and packaging scripts).
+Source: the full matrix below ran on the release-candidate code. After the release packaging change
+(Gallery `RequiredModules` for the SDK and UI, project URLs, registry READMEs, publish-only workflows)
+the PowerShell suites (all machines, both editions on Windows), the Python suite (workstation), the
+installed `uv tool install` wheel and all five real-input GUI runs were repeated: all passed.
 
 ## Results
 
@@ -61,7 +64,8 @@ before a pointer click; every click and key press is real OS input.
   Extensions are activated in the background after the shell is shown (headless host: one extension
   active 0.33 s after start in Python, 0.9–1.2 s in PowerShell).
 - PowerShell edition, one fresh process per request: 100 action + page-refresh cycles took
-  59–66 s (about 0.3 s per request). Python edition (persistent worker): 8.4 s.
+  70–79 s with the released manifest (about 0.35–0.4 s per request; each background runspace also
+  loads the SDK and UI modules declared as `RequiredModules`). Python edition (persistent worker): 8.4 s.
 
 ## Defects found and fixed during qualification
 
