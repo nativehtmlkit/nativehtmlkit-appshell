@@ -127,6 +127,9 @@ def _pids(runtime) -> list[int]:
 
 
 def _alive(pid: int) -> bool:
+    if os.name == "nt":  # os.kill(pid, 0) would TerminateProcess on Windows
+        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True).stdout
+        return str(pid) in out
     try:
         os.kill(pid, 0)
     except OSError:
