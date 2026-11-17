@@ -1,5 +1,9 @@
 # Build and qualification results — 2026-11-17
 
+> **Superseded by `VERIFICATION.md`** (native qualification of both editions on Linux and Windows,
+> same day). The table below is the original authoring-environment report, kept as history; its
+> "NOT RUN" rows have since been run and several of the risks it lists were real defects.
+
 This report states what was actually executed in the authoring environment. It is **not** a
 native release qualification or a claim that PowerShell runs successfully on the target OS.
 

@@ -1,7 +1,7 @@
 # AppShell 0.1.0 implementation map
 
-**Status: source candidate, not GA.** Supersedes a few design-only details in
-`02-ARCHITECTURE.md` that were resolved during implementation. This document identifies what
+**Status: release candidate, qualified (see `VERIFICATION.md`), not published.** Supersedes a few
+design-only details in `02-ARCHITECTURE.md` that were resolved during implementation. This document identifies what
 is actually present in the repository. Do not mistake a completed implementation for native
 qualification. No binaries were published.
 
@@ -23,6 +23,10 @@ qualification. No binaries were published.
 | `.../scaffold.py` | creates an independent PEP 621 Python package, example page/action and test |
 
 Python intentionally starts one **long-lived isolated worker process per active extension**.
+The worker points file descriptor 1 at stderr before loading extension code, so `print`,
+`os.write(1, …)`, C extensions and child processes cannot reach the protocol pipe; the host drains
+stderr into `logs/<id>.log` with a 4 MiB bound per worker start. After a worker dies, the next user
+request starts a new one (a new request, never a retry).
 All extension code runs in that worker, not in the UI host process. The worker wrapper is pure
 stdlib and runs in the extension's environment, so there is no AppShell SDK dependency. UI
 work stays on the NativeHTMLKit owner thread through `UI.post()`.
@@ -41,6 +45,14 @@ work stays on the NativeHTMLKit owner thread through `UI.post()`.
 | `.../AppShell.Host.ps1` | SDK-supported supervised backend script/entry point |
 | `.../Private/Scaffold.ps1` | generates a real PowerShell `.psd1/.psm1` package and Pester test |
 
+**PowerShell worker channel (private):** the request is one `\u`-escaped ASCII JSON line on stdin
+(immune to console code pages); the response is a UTF-8 JSON file named by the host; stdout and
+stderr carry only incidental output, drained with a 1 MiB bound per request into
+`logs/<id>.log`. On timeout the whole process tree is killed. Arguments use
+`ProcessStartInfo.ArgumentList` on PowerShell 7 and Windows quoting rules on 5.1. Desktop callbacks
+are module-bound scriptblocks (not `.GetNewClosure()`), and at most 6 background requests run at
+once (the SDK allows 8 per application; a newer page navigation waits for a free slot).
+
 **One deliberate design deviation:** PowerShell uses a fresh same-language **process per
 manifest/page/action request**, instead of one long-lived process per extension. This avoids
 runspace poisoning, module reload and stdout protocol cross-talk in v0.1, and permits Windows
@@ -54,18 +66,27 @@ by the normal module installation environment; v0.1 does not implement a depende
 
 Python supports local project folder, `.whl`, exact package `name==version` and GitHub SHA
 source through uv. It promotes candidates after their worker reports a valid manifest. Direct
-drop-ins under `extensions/` are scanned and copied to immutable releases; malformed sources
-are quarantined by fingerprint. Source builds may execute code and require explicit trust.
+drop-ins under `extensions/` are fingerprinted, copied to `incoming/` and installed from that
+copy (never built inside the user's folder; a copy that differs from the fingerprint is
+rejected); malformed sources are quarantined by fingerprint. A removed drop-in stays suppressed
+only while its folder exists. Re-staging an installed pinned package is a no-op. Source builds may execute code and require explicit trust.
 
 PowerShell supports a directory with exactly one AppShell `.psd1`, exact PSGallery module name
 and version, and direct module folder drops. Staged files live under `incoming/`. The worker
-imports only the staged/promoted module. PSResourceGet or PowerShellGet runs **only at startup**
-for queued gallery sources. Edition-specific module resolution and dependency behavior require
-native qualification.
+imports only the staged/promoted module. PSResourceGet (exact `[x.y.z]` range) or PowerShellGet runs **only at
+startup** for queued gallery sources; the saved version is checked, and the release root is on the
+worker's `PSModulePath` so saved dependencies resolve. `APPSHELL_PS_REPOSITORY` names a registered
+repository (default `PSGallery`).
 
 ## Recovery guarantees and limits
 
 - Persistent JSON registry: atomic replace and small filesystem lock. No database/service.
+- Session lock (`.session.lock`) held for the desktop's lifetime and released by the OS when the
+  process dies: a second instance on the same home is refused; `appshell restore` /
+  `Restore-AppShell` work after a crash and clear the stale `running.json`.
+- Last-known-good is committed only after a normal shutdown with every enabled extension active;
+  a lost host connection keeps the unclean marker. Damaged state starts recovery mode and is kept
+  byte-for-byte (backups/) until an explicit restore.
 - Old executable releases remain on disk after updates; a failed candidate leaves its prior
   registry pointer intact. The registry is not a software sandbox.
 - `last-good.json` is replaced only after a clean and healthy running session. On an unclean

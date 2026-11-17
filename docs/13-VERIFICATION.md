@@ -1,8 +1,9 @@
 # Verification evidence and release gates
 
-**Current status:** source implementation complete as authored; native qualification not done
-in the authoring environment. No claim of release readiness. Work from a disposable home and
-record actual commands, exit codes, versions, logs, screenshots and commit SHA.
+**Current status (2026-11-17):** every gate in the table below was run on KDE Plasma Wayland and
+Windows Server 2022 for Python, PowerShell 7 and Windows PowerShell 5.1; results, versions and the
+remaining limitations are in `VERIFICATION.md`. The sections "Verified here" and "Not verified here"
+below describe the original authoring environment and are kept as history.
 
 ## Verified here (authoring environment)
 

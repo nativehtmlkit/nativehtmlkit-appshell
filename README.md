@@ -1,10 +1,10 @@
 # NativeHTMLKit AppShell
 
-> **0.1.0 source candidate — implemented, qualification pending.** This repository contains
-> independent Python and PowerShell desktop shells, native extension loaders, package
-> staging/rollback, SDK-backed UI, generators, examples, tests, and a local-agent handoff.
-> The Python unit/integration checks were run in the authoring environment. The PowerShell
-> Pester suite and native desktop gates **have not** been run here; do not publish as GA yet.
+> **0.1.0 release candidate — qualified, not published.** Both editions pass their test suites and
+> real-input desktop runs on Linux KDE Plasma Wayland and Windows Server 2022 (Python, PowerShell 7,
+> Windows PowerShell 5.1) against NativeHTMLKit Core 1.0.3, SDK 0.1.2 and UI 0.1.1. Evidence and the
+> remaining limitations (no screen-reader run, unpublished-extension paths) are in
+> `docs/VERIFICATION.md`.
 
 AppShell is a deliberately small, native desktop application **built with** NativeHTMLKit.
 It is not part of the Rust Core, SDK protocol, UI component library, or CLI.
@@ -27,8 +27,9 @@ cross-language broker, Node.js, browser, HTTP server, central marketplace or run
 
 ## Quick start: Python
 
-Prerequisites: installed NativeHTMLKit Core/native host and compatible Python/UI packages.
-From `python/`:
+Prerequisites: Python 3.10+ and `uv` on `PATH` (AppShell creates one uv environment per
+extension). `nativehtmlkit` 0.1.2 and `nativehtmlkit-ui` 0.1.1 are installed as dependencies and
+bring the native host. From `python/`:
 
 ```bash
 uv venv .venv
@@ -55,8 +56,10 @@ may execute build hooks and dependencies have full user permissions: only instal
 
 ## Quick start: PowerShell
 
-Prerequisites: the NativeHTMLKit PowerShell SDK and `NativeHTMLKit.UI` module on the same machine.
+Prerequisites: the `NativeHTMLKit` (0.1.2) and `NativeHTMLKit.UI` (0.1.1) modules on the same machine.
 No Python or uv required. On Linux run with PowerShell 7; on Windows use PowerShell 7 or 5.1.
+Gallery-sourced extensions need PSResourceGet (or PowerShellGet with the NuGet provider on 5.1);
+set `APPSHELL_PS_REPOSITORY` to use a registered repository other than `PSGallery`.
 
 ```powershell
 Import-Module ./powershell/NativeHTMLKit.AppShell/NativeHTMLKit.AppShell.psd1 -Force
@@ -72,7 +75,9 @@ Gallery installs can be queued with a pinned version:
 Add-AppShellExtension -Name Example.Module -RequiredVersion 1.2.3
 ```
 
-The module must have AppShell manifest metadata and export `Invoke-AppShellExtension`.
+The module must have AppShell manifest metadata and export `Invoke-AppShellExtension`. Each request
+runs in a fresh PowerShell process (about 0.3 s); `Write-Host`, warnings and other incidental
+output go to the extension log (see `docs/03-CONTRACTS.md`).
 View installed modules with `Get-AppShellExtension`; queue changes with
 `Enable-AppShellExtension`, `Disable-AppShellExtension`, `Remove-AppShellExtension`.
 Use `Restore-AppShell` while the window is closed or `Start-AppShell -SafeMode` for recovery.
@@ -118,27 +123,27 @@ examples/powershell/Greeter/   installable PowerShell example
 templates/                     generators and template guidance
 docs/                          normative design, risks, verification, ADRs
 agent/                         autonomous completion / qualification prompt
-scripts/                       offline validation and packaging helpers
+scripts/                       qualify.py (offline checks), build.py (release artifacts)
+qualification/gui/             real-input desktop driver and probes (test tooling)
 ```
 
 ## Development / release qualification
 
-Run Python contract and real local-uv worker tests:
+Tests run locally and on lab desktops (there is no CI build; GitHub Actions are reserved for
+publishing already-built assets).
 
 ```bash
-cd python && python -m pytest -q
+python scripts/qualify.py                 # inventory, JSON, Python AST, PowerShell parser (if pwsh)
+cd python && python -m pytest -q tests    # needs uv; native tests start the host in headless mode
 ```
-
-Run PowerShell tests with Pester 5 (PS7 Linux, PS7 Windows and Windows PowerShell 5.1):
 
 ```powershell
-Invoke-Pester ./powershell/tests
-Invoke-Pester ./examples/powershell/Greeter/tests
+Invoke-Pester ./powershell/tests, ./examples/powershell/Greeter/tests   # Pester 5; PS 7 and 5.1
 ```
 
-For native GUI gates, use the existing KDE Wayland desktop and Windows test VM with disposable
-AppShell homes. The exact matrix, unresolved risks and instructions are in
-`docs/13-VERIFICATION.md`, `docs/12-IMPLEMENTATION.md`, and `agent/LOCAL-AGENT-PROMPT.md`.
+Real-input desktop runs: `qualification/gui/` (KDE: `run-linux.sh`; Windows: `driver.py` inside an
+interactive desktop). Release-candidate artifacts: `python scripts/build.py` (wheel, sdist, module
+zip, `SHA256SUMS` in `dist/`). Results and limitations: `docs/VERIFICATION.md`.
 
 ## Scope limits
 
