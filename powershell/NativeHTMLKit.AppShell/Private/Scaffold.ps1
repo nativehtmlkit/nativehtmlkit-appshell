@@ -4,7 +4,7 @@ function New-AppShellExtension {
           [Parameter(Mandatory)][string]$OutputPath,
           [string]$Title)
     Test-AppShellId $Id
-    $root = [IO.Path]::GetFullPath($OutputPath)
+    $root = Resolve-AppShellUserPath $OutputPath
     if (Test-Path -LiteralPath $root) { throw "Destination already exists: $root" }
     $short = ($Id -split '\.')[-1]
     $titleValue = if ($Title) { $Title.Trim() } else { (Get-Culture).TextInfo.ToTitleCase($short.Replace('-',' ')) }
@@ -13,6 +13,8 @@ function New-AppShellExtension {
     $parts = @($short.Split('-'))
     $moduleName = 'AppShell.' + (($parts | ForEach-Object { (Get-Culture).TextInfo.ToTitleCase($_) }) -join '')
     $guid = [guid]::NewGuid().ToString()
+    # Single-quoted PowerShell literals: double embedded quotes once, before templating.
+    $safeTitle = $titleValue.Replace("'", "''")
     $null = New-Item -ItemType Directory -Path $root
     $null = New-Item -ItemType Directory -Path (Join-Path $root 'tests')
     $manifest = @"
@@ -21,7 +23,7 @@ function New-AppShellExtension {
     ModuleVersion = '0.1.0'
     GUID = '$guid'
     Author = 'AppShell extension author'
-    Description = '$titleValue for NativeHTMLKit AppShell'
+    Description = '$safeTitle for NativeHTMLKit AppShell'
     PowerShellVersion = '5.1'
     FunctionsToExport = @('Invoke-AppShellExtension')
     CmdletsToExport = @()
@@ -86,12 +88,11 @@ function Invoke-AppShellExtension {
 }
 Export-ModuleMember -Function Invoke-AppShellExtension
 '@
-    # All extension-provided values are sourced from trusted generator arguments.
-    $safeTitle = $titleValue.Replace("'", "''")
-    $manifest = $manifest.Replace($titleValue, $safeTitle)
     $code = $code.Replace('__ID__', $Id).Replace('__TITLE__', $safeTitle)
-    [IO.File]::WriteAllText((Join-Path $root ($moduleName + '.psd1')), $manifest, (New-Object Text.UTF8Encoding($false)))
-    [IO.File]::WriteAllText((Join-Path $root ($moduleName + '.psm1')), $code, (New-Object Text.UTF8Encoding($false)))
+    # UTF-8 WITH BOM: Windows PowerShell 5.1 reads BOM-less scripts as ANSI (non-ASCII titles).
+    $scriptEncoding = New-Object Text.UTF8Encoding($true)
+    [IO.File]::WriteAllText((Join-Path $root ($moduleName + '.psd1')), $manifest, $scriptEncoding)
+    [IO.File]::WriteAllText((Join-Path $root ($moduleName + '.psm1')), $code, $scriptEncoding)
     $tests = @"
 # Requires Pester 5. Run Invoke-Pester from this directory.
 Describe '$Id extension' {
@@ -104,7 +105,7 @@ Describe '$Id extension' {
     }
 }
 "@
-    [IO.File]::WriteAllText((Join-Path $root 'tests/Extension.Tests.ps1'),$tests,(New-Object Text.UTF8Encoding($false)))
+    [IO.File]::WriteAllText((Join-Path $root 'tests/Extension.Tests.ps1'),$tests,$scriptEncoding)
     [IO.File]::WriteAllText((Join-Path $root 'README.md'),("# " + $titleValue + "`n`n" +
         'This is a native PowerShell module extension. Copy its directory under the AppShell ' +
         '`extensions/` folder, restart, and it appears in navigation.' + "`n`n" +
