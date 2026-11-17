@@ -57,3 +57,32 @@ Describe 'PowerShell AppShell: real same-language worker' {
         & (Get-Module NativeHTMLKit.AppShell) { param($h) Complete-AppShellSession -Home $h -Commit } $stateHome
     }
 }
+Describe 'PowerShell AppShell: shared JSON contract fixtures' {
+    BeforeAll {
+        $script:Fix = Join-Path $PSScriptRoot '../../fixtures'
+        $script:Mod = Get-Module NativeHTMLKit.AppShell
+        function script:Read-Fixture([string]$Name) { Get-Content -LiteralPath (Join-Path $script:Fix $Name) -Raw -Encoding UTF8 | ConvertFrom-Json }
+        $script:Manifest = & $script:Mod { param($m) Assert-AppShellManifest $m $m.id $m.version } (Read-Fixture 'valid/manifest.json')
+    }
+    It 'accepts the valid manifest and view fixtures parsed from JSON' {
+        $script:Manifest.api_version | Should -Be 1
+        $view = & $script:Mod { param($v, $m) Assert-AppShellView $v $m } (Read-Fixture 'valid/view.json') $script:Manifest
+        @($view.blocks).Count | Should -BeGreaterThan 0
+    }
+    It 'rejects invalid manifest fixture <_>' -ForEach @('manifest-bad-id.json', 'manifest-duplicate-page.semantic.json',
+            'manifest-missing-confirmation.json', 'manifest-unsupported-version.json') {
+        $m = Read-Fixture ('invalid/' + $_)
+        { & $script:Mod { param($m) Assert-AppShellManifest $m ([string]$m.id) ([string]$m.version) } $m } | Should -Throw
+    }
+    It 'rejects invalid view fixture <_>' -ForEach @('view-bad-heading-level.json', 'view-raw-html.json', 'view-unknown-command.semantic.json') {
+        $v = Read-Fixture ('invalid/' + $_)
+        { & $script:Mod { param($v, $m) Assert-AppShellView $v $m } $v $script:Manifest } | Should -Throw
+    }
+    It 'renders hostile text escaped' {
+        $view = @{ title = 'x'; blocks = @(@{ kind = 'heading'; text = '<script>alert(1)</script>'; level = 3 },
+            @{ kind = 'table'; columns = @(@{ key = 'a'; title = '<i>' }); rows = @(@{ a = '<iframe>' }) }) }
+        $html = & $script:Mod { param($v) $c = @{ BlockIndex = 0; Generation = 1; Fields = @{}; Actions = @{} }; Render-AppShellBlocks @($v.blocks) $c } $view
+        $html | Should -Not -Match '<script>|<iframe>|<i>'
+        $html | Should -Match '&lt;script&gt;'
+    }
+}

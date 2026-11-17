@@ -93,7 +93,7 @@ function Assert-AppShellBlock {
             $limit = if ($kind -eq 'heading') { 300 } elseif ($kind -eq 'notice') { 5000 } else { 10000 }
             Assert-AppShellText $Block.text 'block.text' $limit
             if ($kind -eq 'heading' -and $Block.ContainsKey('level') -and
-                 ($Block.level -isnot [int] -or $Block.level -lt 1 -or $Block.level -gt 4)) { throw 'Invalid heading level' }
+                 (($Block.level -isnot [int] -and $Block.level -isnot [long]) -or $Block.level -lt 1 -or $Block.level -gt 4)) { throw 'Invalid heading level' }
             if ($kind -eq 'notice' -and $Block.ContainsKey('tone') -and @('info','success','warning','danger') -cnotcontains $Block.tone) { throw 'Invalid notice tone' }
             break
         }
