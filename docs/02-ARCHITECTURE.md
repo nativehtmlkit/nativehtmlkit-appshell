@@ -42,7 +42,7 @@ NativeHTMLKit Core native host  ← authenticated link →  AppShell backend (sa
 - Python: native SDK app backend, Python venv workers; no PowerShell process.
 - PowerShell: native SDK app backend, PowerShell 5.1 or 7 worker selected to match running edition; no Python process.
 - Each extension worker uses private standard-input/output JSONL framing for **host-internal** requests and response. Stderr is diagnostic. Worker is the only place third-party code loads.
-- Python worker implementation can reuse ideas from old Octopus; PowerShell worker is a native PowerShell implementation with .NET process/streams, not a Python port hidden inside a script.
+- Python worker is a plain Python subprocess implementation; PowerShell worker is a native PowerShell implementation with .NET process/streams, not a Python port hidden inside a script.
 
 ## Public extension model vs internal worker protocol
 

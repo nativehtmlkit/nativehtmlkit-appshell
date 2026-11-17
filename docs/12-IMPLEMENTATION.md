@@ -1,9 +1,9 @@
 # AppShell 0.1.0 implementation map
 
-**Status: release candidate, qualified (see `VERIFICATION.md`), not published.** Supersedes a few
+**Status: 0.1.0, qualified (see `VERIFICATION.md`) and released on 2026-11-17 as GitHub release `v0.1.0`, PyPI `nativehtmlkit-appshell` and PowerShell Gallery `NativeHTMLKit.AppShell`.** Supersedes a few
 design-only details in `02-ARCHITECTURE.md` that were resolved during implementation. This document identifies what
 is actually present in the repository. Do not mistake a completed implementation for native
-qualification. No binaries were published.
+qualification; `VERIFICATION.md` records what was tested.
 
 ## Source inventory and boundaries
 

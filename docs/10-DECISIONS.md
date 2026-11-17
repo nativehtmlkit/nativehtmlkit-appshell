@@ -16,7 +16,7 @@ These are the default implementation decisions. Change them only after a reprodu
 | A010 | Per-extension code rollback, persistent data unchanged | Promising to undo remote operations, migrations and credential changes |
 | A011 | Keep v0.1 API to page/action | Built-in event bus and general capability broker before first real case |
 | A012 | Human-selected native sources; optional static catalog later | Central marketplace accounts, servers, auto-updates |
-| A013 | No extension SDK package dependency | Recreating Octopus SDK name-conflict and user package burden |
+| A013 | No extension SDK package dependency | A separately published SDK package (registry name conflicts, extra dependency for users) |
 | A014 | UI shell does not require network connections at boot | Mandatory remote system scan or background server |
 | A015 | Risk confirmation for write/destructive; no automatic retry | Security theater claiming a full plugin sandbox or safe automatic destructive retries |
 | A016 | Explicit absolute PS module file path; no global module install | Modifying user machine-wide PSModulePath and silently selecting latest module |

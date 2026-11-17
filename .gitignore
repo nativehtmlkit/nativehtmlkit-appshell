@@ -10,3 +10,4 @@ dist/
 *.bak
 ._*/
 .DS_Store
+.ruff_cache/

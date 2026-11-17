@@ -53,7 +53,7 @@ requires-python = ">=3.10"
 
 Supports staged sources: pinned PyPI `name==version`, local `.whl`, and local folder containing `pyproject.toml`. A pinned Git commit source can follow in a later UX milestone. These three source modes belong in v0.1; `uv` does the actual environment preparation **after restart**. No arbitrary ZIP or custom plugin bundle required. For a dropped wheel, the shell copies it to `releases/<id>/<version>-<hash>/source/`; then builds a private venv and executes an explicit `uv pip install --python <venv-python> <wheel/path-or-project>`. Only then does it inspect `importlib.metadata` in **that venv** to find exactly one matching AppShell entry point. All imports happen in a child process. Do not use `uv tool install` as a plugin import mechanism.
 
-**No dependency on a globally published `appshell-sdk` distribution in v0.1.** The host supplies its tiny standard-library worker bootstrap at an explicit filesystem path. This avoids recreating Octopus's unresolved `octopus-sdk` PyPI name collision. Plugin author gets a documented duck-typed API, schema and fixtures; optional typed stubs can come later.
+**No dependency on a globally published `appshell-sdk` distribution in v0.1.** The host supplies its tiny standard-library worker bootstrap at an explicit filesystem path. This avoids a separately published SDK package and its registry-name and version-coupling problems. Plugin author gets a documented duck-typed API, schema and fixtures; optional typed stubs can come later.
 
 ## PowerShell edition — standard modules
 

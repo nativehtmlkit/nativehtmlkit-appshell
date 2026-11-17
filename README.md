@@ -1,6 +1,7 @@
 # NativeHTMLKit AppShell
 
-> **0.1.0 release candidate — qualified, not published.** Both editions pass their test suites and
+> **0.1.0, released 2026-11-17** as GitHub release `v0.1.0`, PyPI `nativehtmlkit-appshell` and
+> PowerShell Gallery `NativeHTMLKit.AppShell`. Both editions pass their test suites and
 > real-input desktop runs on Linux KDE Plasma Wayland and Windows Server 2022 (Python, PowerShell 7,
 > Windows PowerShell 5.1) against NativeHTMLKit Core 1.0.3, SDK 0.1.2 and UI 0.1.1. Evidence and the
 > remaining limitations (no screen-reader run, unpublished-extension paths) are in
@@ -126,11 +127,18 @@ powershell/                    PowerShell module, worker, UI, Pester
 examples/python/Greeter/       installable Python example
 examples/powershell/Greeter/   installable PowerShell example
 templates/                     generators and template guidance
-docs/                          normative design, risks, verification, ADRs
-agent/                         autonomous completion / qualification prompt
+docs/                          design, contracts, decisions, implementation map, verification
 scripts/                       qualify.py (offline checks), build.py (release artifacts)
 qualification/gui/             real-input desktop driver and probes (test tooling)
 ```
+
+## Documentation
+
+- [Architecture](docs/02-ARCHITECTURE.md) · [Contracts](docs/03-CONTRACTS.md) · [Installation](docs/04-INSTALLATION.md)
+- [Lifecycle and recovery](docs/05-LIFECYCLE-RECOVERY.md) · [UI](docs/06-UI.md) · [Security and compatibility](docs/07-SECURITY-COMPATIBILITY.md)
+- [Tests](docs/08-TESTS.md) · [Decisions](docs/10-DECISIONS.md) · [Implementation map](docs/12-IMPLEMENTATION.md) · [Verification](docs/VERIFICATION.md)
+
+The numbered documents keep their original numbers; gaps are documents that were retired.
 
 ## Development / release qualification
 
@@ -138,8 +146,9 @@ Tests run locally and on lab desktops (there is no CI build; GitHub Actions are 
 publishing already-built assets).
 
 ```bash
-python scripts/qualify.py                 # inventory, JSON, Python AST, PowerShell parser (if pwsh)
-cd python && python -m pytest -q tests    # needs uv; native tests start the host in headless mode
+uv run scripts/qualify.py                 # inventory, JSON, Python AST, PowerShell parser (if pwsh)
+cd python && uv run --no-project --with pytest --with-editable . pytest -q tests
+                                          # native tests start the host in headless mode
 ```
 
 ```powershell
@@ -147,7 +156,7 @@ Invoke-Pester ./powershell/tests, ./examples/powershell/Greeter/tests   # Pester
 ```
 
 Real-input desktop runs: `qualification/gui/` (KDE: `run-linux.sh`; Windows: `driver.py` inside an
-interactive desktop). Release-candidate artifacts: `python scripts/build.py` (wheel, sdist, module
+interactive desktop). Release artifacts: `uv run scripts/build.py` (wheel, sdist, module
 zip, `SHA256SUMS` in `dist/`). Results and limitations: `docs/VERIFICATION.md`.
 
 ## Scope limits
