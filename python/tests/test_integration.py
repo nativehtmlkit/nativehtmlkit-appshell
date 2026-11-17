@@ -1,5 +1,6 @@
 """Real uv/worker integration, opt-in or runs when uv is available. No native GUI required."""
 import shutil
+import sys
 import subprocess
 from pathlib import Path
 import pytest
@@ -17,7 +18,7 @@ def test_local_uv_install_worker_and_actions(tmp_path):
     # with uv in an independent extension venv. Source-install with fresh deps is
     # separately qualified on a machine with internet or an internal package mirror.
     wheels=tmp_path/'wheels'
-    process=subprocess.run(['uv','build','--offline','--no-build-isolation','--out-dir',str(wheels)],
+    process=subprocess.run(['uv','build','--offline','--no-build-isolation','--python',sys.executable,'--out-dir',str(wheels)],
                            cwd=source, capture_output=True,text=True)
     if process.returncode:
         pytest.skip('Offline wheel build backend unavailable: '+process.stderr[-200:])

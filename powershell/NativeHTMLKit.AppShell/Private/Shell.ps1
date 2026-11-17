@@ -233,11 +233,11 @@ function Invoke-AppShellClick {
         $source=Get-NativeHTMLKitValue -Document $Context.Document -Element 'as-source'
         $source=$source.Trim()
         $moduleManifest=$Context.ModuleManifest
-        $home=$Context.Home
+        $stateHome=$Context.Home
         $callbackContext=$Context
         $complete={ param($result) Set-AppShellStatus $callbackContext 'Extension staged. Restart required.' }.GetNewClosure()
         $failed={ param($err) Set-AppShellStatus $callbackContext ('Stage failed: '+$err.Message) }.GetNewClosure()
-        $null=Start-NativeHTMLKitTask -Application $Context.Application -ArgumentList @($moduleManifest,$home,$source) -TimeoutMilliseconds 60000 -ScriptBlock {
+        $null=Start-NativeHTMLKitTask -Application $Context.Application -ArgumentList @($moduleManifest,$stateHome,$source) -TimeoutMilliseconds 60000 -ScriptBlock {
             param($moduleFile,$h,$src)
             Import-Module -Name $moduleFile -Force
             if ($src -match '^([A-Za-z][A-Za-z0-9_.-]*)==(\d+(?:\.\d+){1,3})$') {

@@ -20,9 +20,9 @@ Describe 'PowerShell AppShell: module and contract' {
     It 'queues local modules without importing code' {
         $module=Join-Path $TestDrive 'LocalExtension'
         $null=New-AppShellExtension -Id org.example.local -OutputPath $module
-        $home=Join-Path $TestDrive 'state'
-        Add-AppShellExtension -SourcePath $module -Home $home | Should -Match 'restart'
-        $pending=Get-Content (Join-Path $home 'pending.json') -Raw | ConvertFrom-Json
+        $stateHome=Join-Path $TestDrive 'state'
+        Add-AppShellExtension -SourcePath $module -Home $stateHome | Should -Match 'restart'
+        $pending=Get-Content (Join-Path $stateHome 'pending.json') -Raw | ConvertFrom-Json
         $pending.operations.Count | Should -Be 1
     }
 }
@@ -31,29 +31,29 @@ Describe 'PowerShell AppShell: real same-language worker' {
         $source=Join-Path $TestDrive 'WorkerExample'
         $null=New-AppShellExtension -Id org.example.worker -OutputPath $source -Title 'Worker Example'
         $meta=Get-ChildItem -LiteralPath $source -Filter '*.psd1' | Select-Object -First 1
-        $home=Join-Path $TestDrive 'worker-data'
+        $stateHome=Join-Path $TestDrive 'worker-data'
         $moduleRoot=Join-Path $PSScriptRoot '../NativeHTMLKit.AppShell'
         $worker=Join-Path $moduleRoot 'AppShell.Worker.ps1'
-        $manifest=Invoke-AppShellWorker -ModulePath $meta.FullName -ExtensionId 'org.example.worker' -DataDirectory $home -Operation manifest -WorkerFile $worker
+        $manifest=Invoke-AppShellWorker -ModulePath $meta.FullName -ExtensionId 'org.example.worker' -DataDirectory $stateHome -Operation manifest -WorkerFile $worker
         $manifest.id | Should -Be 'org.example.worker'
-        $view=Invoke-AppShellWorker -ModulePath $meta.FullName -ExtensionId 'org.example.worker' -DataDirectory $home -Operation page -Payload @{page_id='overview'} -WorkerFile $worker
+        $view=Invoke-AppShellWorker -ModulePath $meta.FullName -ExtensionId 'org.example.worker' -DataDirectory $stateHome -Operation page -Payload @{page_id='overview'} -WorkerFile $worker
         $view.blocks.Count | Should -BeGreaterThan 1
-        $result=Invoke-AppShellWorker -ModulePath $meta.FullName -ExtensionId 'org.example.worker' -DataDirectory $home -Operation action -Payload @{command_id='refresh';values=@{};params=@{}} -WorkerFile $worker
+        $result=Invoke-AppShellWorker -ModulePath $meta.FullName -ExtensionId 'org.example.worker' -DataDirectory $stateHome -Operation action -Payload @{command_id='refresh';values=@{};params=@{}} -WorkerFile $worker
         $result.refresh | Should -BeTrue
     }
     It 'installs from local source only on boot and preserves last-good' {
         $source=Join-Path $TestDrive 'BootExample'
         $null=New-AppShellExtension -Id org.example.boot -OutputPath $source
-        $home=Join-Path $TestDrive 'boot-state'
+        $stateHome=Join-Path $TestDrive 'boot-state'
         $worker=Join-Path $PSScriptRoot '../NativeHTMLKit.AppShell/AppShell.Worker.ps1'
-        Add-AppShellExtension -SourcePath $source -Home $home | Should -Match 'restart'
-        @(Get-AppShellExtension -Home $home).Count | Should -Be 0
-        $state=Invoke-AppShellBoot -Home $home -WorkerFile $worker
+        Add-AppShellExtension -SourcePath $source -Home $stateHome | Should -Match 'restart'
+        @(Get-AppShellExtension -Home $stateHome).Count | Should -Be 0
+        $state=Invoke-AppShellBoot -Home $stateHome -WorkerFile $worker
         $state.status['org.example.boot'] | Should -Be 'ACTIVE'
-        & (Get-Module NativeHTMLKit.AppShell) { param($h) Complete-AppShellSession -Home $h -Commit } $home
-        Test-Path (Join-Path $home 'last-good.json') | Should -BeTrue
-        $restarted=Invoke-AppShellBoot -Home $home -WorkerFile $worker
+        & (Get-Module NativeHTMLKit.AppShell) { param($h) Complete-AppShellSession -Home $h -Commit } $stateHome
+        Test-Path (Join-Path $stateHome 'last-good.json') | Should -BeTrue
+        $restarted=Invoke-AppShellBoot -Home $stateHome -WorkerFile $worker
         $restarted.status['org.example.boot'] | Should -Be 'ACTIVE'
-        & (Get-Module NativeHTMLKit.AppShell) { param($h) Complete-AppShellSession -Home $h -Commit } $home
+        & (Get-Module NativeHTMLKit.AppShell) { param($h) Complete-AppShellSession -Home $h -Commit } $stateHome
     }
 }

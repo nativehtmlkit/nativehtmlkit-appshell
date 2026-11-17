@@ -58,7 +58,7 @@ function Write-AppShellJson {
         [IO.File]::WriteAllText($tmp, $json + [Environment]::NewLine, (New-Object Text.UTF8Encoding($false)))
         if (Test-Path -LiteralPath $Path) {
             # Replace is atomic on a single filesystem and is supported on .NET Framework 4.7+.
-            [IO.File]::Replace($tmp, $Path, $null)
+            [IO.File]::Replace($tmp, $Path, [NullString]::Value)
         } else {
             [IO.File]::Move($tmp, $Path)
         }
