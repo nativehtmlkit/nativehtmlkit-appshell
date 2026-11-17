@@ -13,6 +13,9 @@ from . import __version__
 from .contract import FRAME_LIMIT, ContractError, validate_manifest, validate_result, validate_view
 
 
+LOG_SESSION_LIMIT = 4 * 1024 * 1024  # bytes of worker stderr kept per worker start
+
+
 class WorkerError(RuntimeError):
     pass
 
@@ -32,6 +35,26 @@ class WorkerClient:
         self._serial = 0
         self.manifest: dict | None = None
         self._log_handle = None
+        self._pump: threading.Thread | None = None
+
+    @staticmethod
+    def _log_pump(stream, handle, limit: int = LOG_SESSION_LIMIT) -> None:
+        """Copy worker stderr to its log, bounded; keep draining so the worker never blocks."""
+        written = 0
+        try:
+            while True:
+                chunk = stream.read1(65536) if hasattr(stream, "read1") else stream.read(65536)
+                if not chunk:
+                    break
+                if written < limit:
+                    part = chunk[:limit - written]
+                    handle.write(part)
+                    written += len(part)
+                    if written >= limit:
+                        handle.write(b"\n[appshell: worker log limit reached; further output discarded]\n")
+                    handle.flush()
+        except (OSError, ValueError):
+            pass
 
     @staticmethod
     def _reader(stream, output: queue.Queue) -> None:
@@ -75,11 +98,14 @@ class WorkerClient:
             try:
                 self.proc = subprocess.Popen(
                     [str(self.python), "-u", str(self.script), self.ident, self.version, str(self.data), __version__],
-                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self._log_handle,
+                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     cwd=str(self.data), env=env, bufsize=0,
                 )
                 threading.Thread(target=self._reader, args=(self.proc.stdout, self.messages), daemon=True,
                                  name=f"worker-reader-{self.ident}").start()
+                self._pump = threading.Thread(target=self._log_pump, args=(self.proc.stderr, self._log_handle),
+                                              daemon=True, name=f"worker-log-{self.ident}")
+                self._pump.start()
                 ready = self._receive(timeout)
                 if ready.get("type") != "ready":
                     raise WorkerError(f"Worker initialization failed: {ready.get('error', ready)}")
@@ -162,7 +188,18 @@ class WorkerClient:
                     proc.wait(timeout=2)
             for stream in (proc.stdin, proc.stdout):
                 if stream:
-                    stream.close()
+                    try:
+                        stream.close()
+                    except OSError:
+                        pass
+        pump, self._pump = self._pump, None
+        if pump is not None:
+            pump.join(timeout=2)  # stderr reaches EOF once the worker is gone
+        if proc and proc.stderr:
+            try:
+                proc.stderr.close()
+            except OSError:
+                pass
         if self._log_handle:
             self._log_handle.close()
             self._log_handle = None

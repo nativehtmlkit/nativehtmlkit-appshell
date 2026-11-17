@@ -2,14 +2,12 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
-import shutil
 import sys
 
 from . import __version__
 from .scaffold import generate_python
-from .storage import Store, StateError, json_load, json_save
+from .storage import Store, StateError, json_load
 
 
 def main(argv=None) -> int:
@@ -45,11 +43,15 @@ def main(argv=None) -> int:
             from .runtime import AppShellRuntime
             with Application.start(name="NativeHTMLKit AppShell", app_id="org.nativehtmlkit.AppShell.Python") as app:
                 desktop = Desktop(AppShellRuntime(store, safe_mode=args.safe_mode))
+                clean = False
                 try:
                     desktop.launch(app)
                     app.run()
+                    clean = True
                 finally:
-                    desktop.close()
+                    # A lost host or an exception is an unclean session: keep the marker so the
+                    # next start restores last-known-good.
+                    desktop.close(clean=clean)
             return 0
         if args.command == "list":
             for ident, record in sorted(store.registry().get("extensions", {}).items()):
@@ -58,29 +60,29 @@ def main(argv=None) -> int:
             return 0
         if args.command == "doctor":
             problems = []
-            try:
-                registry = store.registry()
-                for ident, record in registry.get("extensions", {}).items():
-                    release = store.resolve_owned(record["release"], store.releases)
-                    if not release.exists():
-                        problems.append(f"Missing release for {ident}: {release}")
-                print(f"Active extension records: {len(registry.get('extensions', {}))}")
-                print(f"Queued changes: {len(store.pending()['operations'])}")
-                print(f"Failed candidates: {len(store.failed()['items'])}")
-                print(f"Unclean session marker: {store.session_path.is_file()}")
-            except StateError as exc:
-                problems.append(str(exc))
+            for label, check in (("registry", lambda: _check_registry(store, problems)),
+                                 ("queued changes", lambda: len(store.pending()["operations"])),
+                                 ("failed candidates", lambda: len(store.failed()["items"]))):
+                try:
+                    print(f"{label.capitalize()}: {check()}")
+                except (StateError, KeyError, TypeError, AttributeError) as exc:
+                    problems.append(f"{label}: {exc}")
+            running = store.session_active()
+            print(f"Running now: {running}")
+            print(f"Unclean session marker: {store.session_path.is_file() and not running}")
             for problem in problems:
                 print("ERROR: " + problem, file=sys.stderr)
             return 1 if problems else 0
         if args.command == "restore":
             if not store.last_good_path.is_file():
                 raise StateError("No last-known-good snapshot available")
-            if store.session_path.exists():
+            if store.session_active():
                 raise StateError("Close AppShell before restoring its registry")
             snapshot = json_load(store.last_good_path, {"version": 1, "extensions": {}})
             backup = store.backup_registry()
             store.save_registry(snapshot)
+            # The restore is explicit, so a stale marker from a crash must not trigger another one.
+            store.session_path.unlink(missing_ok=True)
             print(f"Restored last-known-good configuration; prior registry backup: {backup}; extension data unchanged")
             return 0
         if args.command == "stage":
@@ -93,3 +95,19 @@ def main(argv=None) -> int:
         print(f"appshell: {exc}", file=sys.stderr)
         return 1
     return 2
+
+
+def _check_registry(store: Store, problems: list) -> int:
+    registry = store.registry()
+    records = registry.get("extensions", {})
+    if not isinstance(records, dict):
+        raise StateError("registry 'extensions' must be an object")
+    for ident, record in records.items():
+        try:
+            release = store.resolve_owned(record["release"], store.releases)
+        except (StateError, KeyError, TypeError) as exc:
+            problems.append(f"Invalid release record for {ident}: {exc}")
+            continue
+        if not release.exists():
+            problems.append(f"Missing release for {ident}: {release}")
+    return len(records)

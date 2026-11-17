@@ -28,7 +28,11 @@ def main() -> int:
         raise SystemExit("usage: worker_main.py ID VERSION DATA_DIR APP_VERSION")
     ident, version, data, app_version = sys.argv[1:]
     protocol = os.fdopen(os.dup(sys.stdout.fileno()), "wb", buffering=0)
-    sys.stdout = sys.stderr  # plugin print() never contaminates protocol stdout
+    # Point fd 1 itself at stderr: print(), os.write(1, ...), C extensions and child processes
+    # that inherit stdout all end up in the extension log, never in the protocol pipe.
+    sys.stdout.flush()
+    os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
+    sys.stdout = sys.stderr
     context = {"data_dir": data, "extension_id": ident, "app_version": app_version}
     os.makedirs(data, exist_ok=True)
     obj = None
@@ -49,6 +53,7 @@ def main() -> int:
     for raw in sys.stdin.buffer:
         if len(raw) > MAX_FRAME:
             break
+        frame: dict = {}
         try:
             frame = json.loads(raw)
             op, req = frame["op"], frame["id"]
@@ -69,7 +74,8 @@ def main() -> int:
         except Exception as exc:
             traceback.print_exc()
             try:
-                send(protocol, {"type": "reply", "id": frame.get("id"), "error": f"{type(exc).__name__}: {str(exc)[:400]}"})
+                req_id = frame.get("id") if isinstance(frame, dict) else None
+                send(protocol, {"type": "reply", "id": req_id, "error": f"{type(exc).__name__}: {str(exc)[:400]}"})
             except Exception:
                 break
     return 0

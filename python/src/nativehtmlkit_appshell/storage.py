@@ -60,38 +60,54 @@ def json_save(path: Path, value: dict) -> None:
             os.unlink(name)
 
 
+def _try_lock(fd) -> bool:
+    """Non-blocking exclusive lock of byte 0; released automatically when the process dies."""
+    try:
+        if os.name == "nt":
+            import msvcrt
+            fd.seek(0)
+            if fd.read(1) == b"":
+                fd.write(b"0")
+                fd.flush()
+            fd.seek(0)
+            msvcrt.locking(fd.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except (BlockingIOError, OSError):
+        return False
+
+
+def _unlock(fd) -> None:
+    if os.name == "nt":
+        import msvcrt
+        fd.seek(0)
+        msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(fd.fileno(), fcntl.LOCK_UN)
+
+
 @contextmanager
 def locked(path: Path):
     """Cross-platform short-lived advisory lock for registry mutations."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a+b") as fd:
         start = time.monotonic()
-        while True:
-            try:
-                if os.name == "nt":
-                    import msvcrt
-                    fd.seek(0)
-                    if fd.read(1) == b"":
-                        fd.write(b"0")
-                        fd.flush()
-                    fd.seek(0)
-                    msvcrt.locking(fd.fileno(), msvcrt.LK_NBLCK, 1)
-                else:
-                    import fcntl
-                    fcntl.flock(fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except (BlockingIOError, OSError):
-                if time.monotonic() - start > 5:
-                    raise StateError("AppShell state is busy; retry shortly")
-                time.sleep(.05)
+        while not _try_lock(fd):
+            if time.monotonic() - start > 5:
+                raise StateError("AppShell state is busy; retry shortly")
+            time.sleep(.05)
         try:
             yield
         finally:
-            if os.name == "nt":
-                fd.seek(0)
-                msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                fcntl.flock(fd.fileno(), fcntl.LOCK_UN)
+            _unlock(fd)
+
+
+def is_dropin(source: dict) -> bool:
+    """True for a source recorded from the user-managed extensions/ folder (any OS separator)."""
+    return str(source.get("path", "")).replace("\\", "/").startswith("extensions/")
 
 
 def safe_copy(source: Path, destination: Path, *, max_total: int = 128 * 1024 * 1024) -> str:
@@ -165,6 +181,9 @@ class Store:
         self.failed_path = self.home / "failed-candidates.json"
         self.session_path = self.home / "running.json"
         self.lock_path = self.home / ".state.lock"
+        # Held for the whole desktop session; the OS drops it if the process dies.
+        self.session_lock_path = self.home / ".session.lock"
+        self._session_fd = None
         self.releases = self.home / "releases"
         self.extensions = self.home / "extensions"
         self.incoming = self.home / "incoming"
@@ -199,9 +218,10 @@ class Store:
             raise StateError("Invalid package source")
         path = Path(value).expanduser()
         if path.exists():
-            dest = self.incoming / uuid.uuid4().hex / path.name
+            # ".", ".." or a drive root have no usable name of their own.
+            dest = self.incoming / uuid.uuid4().hex / (path.absolute().resolve().name or "source")
             digest = safe_copy(path, dest)
-            record = {"kind": "local", "path": str(dest.relative_to(self.home)), "fingerprint": digest}
+            record = {"kind": "local", "path": dest.relative_to(self.home).as_posix(), "fingerprint": digest}
         else:
             # No arbitrary shell commands, moving Git branches, HTTP or requirement expressions.
             import re
@@ -252,9 +272,43 @@ class Store:
         shutil.copy2(self.registry_path, target)
         return target
 
+    def session_active(self) -> bool:
+        """True while some process (this one included) holds the desktop session lock."""
+        if self._session_fd is not None:
+            return True
+        self.home.mkdir(parents=True, exist_ok=True)
+        with self.session_lock_path.open("a+b") as fd:
+            if _try_lock(fd):
+                _unlock(fd)
+                return False
+            return True
+
+    def _acquire_session(self) -> None:
+        fd = self.session_lock_path.open("a+b")
+        if not _try_lock(fd):
+            fd.close()
+            raise StateError(f"AppShell is already running with this home: {self.home}")
+        self._session_fd = fd
+
+    def _release_session(self) -> None:
+        fd, self._session_fd = self._session_fd, None
+        if fd is not None:
+            try:
+                _unlock(fd)
+            finally:
+                fd.close()
+
     def begin_session(self) -> str | None:
         """Recover last clean configuration after an unclean process exit."""
         self.prepare()
+        self._acquire_session()
+        try:
+            return self._begin_session()
+        except BaseException:
+            self._release_session()
+            raise
+
+    def _begin_session(self) -> str | None:
         reason = None
         restore_request = self.home / "restore-on-next-start"
         if self.session_path.exists() or restore_request.exists():
@@ -268,8 +322,9 @@ class Store:
                         if old_records.get(ident, {}).get("release") == candidate.get("release"):
                             continue
                         src = candidate.get("source", {})
-                        if str(src.get("path", "")).startswith("extensions/"):
-                            key = f"dropin:{Path(src['path']).name}:{src.get('fingerprint', '')}"
+                        if is_dropin(src):
+                            name = str(src["path"]).replace("\\", "/").rsplit("/", 1)[-1]
+                            key = f"dropin:{name}:{src.get('fingerprint', '')}"
                             self.mark_failure(key, "Quarantined after unclean shutdown; edit source to retry")
                 self.backup_registry()
                 json_save(self.registry_path, old)
@@ -282,5 +337,15 @@ class Store:
 
     def clean_exit(self) -> None:
         # Commit the version set only after the application has closed normally.
-        json_save(self.last_good_path, self.registry())
-        self.session_path.unlink(missing_ok=True)
+        try:
+            json_save(self.last_good_path, self.registry())
+            self.session_path.unlink(missing_ok=True)
+        finally:
+            self._release_session()
+
+    def end_session(self) -> None:
+        """Orderly exit that must not become last-known-good (failed or partial boot)."""
+        try:
+            self.session_path.unlink(missing_ok=True)
+        finally:
+            self._release_session()

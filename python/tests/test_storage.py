@@ -51,7 +51,8 @@ def test_last_known_good_recovery(tmp_path):
     assert store.last_good_path.is_file()
     store.begin_session()
     store.save_registry({"version":1,"extensions":{"org.example.bad":{"id":"org.example.bad"}}})
-    # Unexpected termination leaves marker; previous clean registry is restored.
+    # Unexpected termination leaves the marker; the OS releases a dead process's session lock.
+    store._release_session()
     reason=store.begin_session()
     assert 'restored' in reason.lower()
     assert store.registry()['extensions'] == original['extensions']
@@ -65,3 +66,4 @@ def test_manual_restore_on_start(tmp_path):
     (store.home/'restore-on-next-start').write_text('1')
     store.begin_session()
     assert 'org.example.a' in store.registry()['extensions']
+    store.end_session()
