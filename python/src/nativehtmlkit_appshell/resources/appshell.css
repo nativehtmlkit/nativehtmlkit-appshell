@@ -26,6 +26,8 @@
 .as-field-label { font-size: 12px; color: #c7d5e9; }
 .as-field input, .as-field textarea, .as-field select, #as-new-source { width: 100%; box-sizing: border-box; background: #152236; color: #ecf4ff; border: 1px solid #4a6280; border-radius: 6px; padding: 8px 9px; }
 .as-field textarea { min-height: 86px; }
+/* Checkboxes are not text boxes: no full-width field chrome. */
+.as-field input[type=checkbox] { width: auto; align-self: flex-start; background: none; border: 0; padding: 0; }
 .as-button { background: #3a6db2; border: 1px solid #568cd1; color: #fff; border-radius: 6px; padding: 8px 13px; margin: 8px 7px 8px 0; cursor: pointer; }
 .as-button:hover { background: #477ec3; }
 .as-table-wrap { overflow: auto; border: 1px solid #40526b; border-radius: 7px; }

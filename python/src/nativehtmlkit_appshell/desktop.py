@@ -38,7 +38,7 @@ class Desktop:
         css = files("nativehtmlkit_appshell").joinpath("resources/appshell.css").read_text("utf-8")
         self.title_state = state("Home")
         self.status_state = state("Starting extensions…")
-        ui = UI(title="NativeHTMLKit AppShell", width=1110, height=740, theme="cobalt",
+        ui = UI(title="NativeHTMLKit AppShell", width=1110, height=700, theme="cobalt",
                 density="compact", extra_css=css)
         self.ui = ui
         with ui.container(css_class="as-layout"):
@@ -287,8 +287,12 @@ class Desktop:
         except Exception as exc:
             self.status_state.set(str(exc)[:500])
             if self.selected and self.selected[0] == ident and token == self.generation:
-                # Keep page visible; never retry a timed-out destructive action.
-                self.doc.insert_html(self.outlet_id, f'<div class="as-notice as-notice-danger">{esc(exc)}</div>', position="afterbegin")
+                # Keep page visible; never retry a timed-out destructive action. The notice is
+                # scrolled into view: on a long page the button that failed may be far below it.
+                notice = f"as-action-error-{token}"
+                self.doc.insert_html(self.outlet_id, f'<div id="{notice}" role="alert" class="as-notice as-notice-danger">'
+                                     f'{esc(exc)}</div>', position="afterbegin")
+                self.doc.scroll_into_view(notice)
 
     def _stage_finished(self, future) -> None:
         try:

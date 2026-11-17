@@ -226,11 +226,14 @@ function Complete-AppShellRequest {
         }
         Set-AppShellStatus $Context ($msg.Substring(0, [Math]::Min(500, $msg.Length)))
         if ($current) {
-            $notice = '<div class="as-notice as-notice-danger">'+(Escape-AppShellHtml $msg)+'</div>'
+            $noticeId = 'as-action-error-' + $meta.generation
+            $notice = '<div id="' + $noticeId + '" role="alert" class="as-notice as-notice-danger">'+(Escape-AppShellHtml $msg)+'</div>'
             if ($meta.operation -eq 'page') { Set-NativeHTMLKitDocumentHtml -Document $Context.Document -Element 'as-content' -Html $notice }
             else {
-                # Keep the page visible; never retry a write whose outcome is unknown.
+                # Keep the page visible; never retry a write whose outcome is unknown. Scroll the
+                # notice into view: on a long page the failed button may be far below it.
                 $null = Invoke-NativeHTMLKitDocumentCommand $Context.Document 'insert_html' @{ element='as-content'; position='afterbegin'; html=$notice }
+                $null = Invoke-NativeHTMLKitDocumentCommand $Context.Document 'scroll_into_view' @{ element=$noticeId }
             }
         }
         return
@@ -410,7 +413,7 @@ function Initialize-AppShellDesktop {
     $lock = Enter-AppShellSession $root
     try {
         $css=[IO.File]::ReadAllText((Join-Path $script:AppShellModuleRoot 'Resources/appshell.css'))
-        $ui=New-NHKUi -Title 'NativeHTMLKit AppShell' -Theme cobalt -Density compact -Width 1110 -Height 740 -ExtraCss $css
+        $ui=New-NHKUi -Title 'NativeHTMLKit AppShell' -Theme cobalt -Density compact -Width 1110 -Height 700 -ExtraCss $css
         $markup=@'
 <div class="as-layout"><aside class="as-sidebar" aria-label="AppShell navigation">
 <div class="as-brand">AppShell</div>
