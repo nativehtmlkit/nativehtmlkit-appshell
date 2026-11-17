@@ -24,4 +24,5 @@ nativehtmlkit_appshell = ["resources/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["integration: requires local uv and an offline-capable wheel builder"]
+markers = ["integration: requires local uv and an offline-capable wheel builder",
+           "native: starts the packaged NativeHTMLKit host (headless test mode)"]

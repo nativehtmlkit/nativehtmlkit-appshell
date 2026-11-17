@@ -1,10 +1,13 @@
-"""Thin Python desktop shell built exclusively from public NativeHTMLKit SDK/UI APIs."""
+"""Thin Python desktop shell built exclusively from public NativeHTMLKit SDK/UI APIs.
+
+Threading: every handler that touches Desktop state or the DOM runs on the UI owner thread.
+Sidebar buttons are UI components (already on the owner); delegated document events arrive on
+the SDK event worker and are re-posted with ``UI.post``; worker results come back the same way.
+"""
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-import html
 from importlib.resources import files
-import traceback
 
 from . import __version__
 from .render import esc, render_view, RenderedView
@@ -23,6 +26,8 @@ class Desktop:
         self.active_view: RenderedView | None = None
         self.special: dict[str, tuple[str, str]] = {}
         self.pending_command: tuple[str, str, dict, dict, int] | None = None
+        self._confirm_origin: str | None = None
+        self.nav_items: dict[str, tuple[str, str]] = {}
         self.executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="appshell-work")
         self.status_state = None
         self.title_state = None
@@ -51,18 +56,21 @@ class Desktop:
                 with ui.container(css_class="as-content") as region:
                     ui.text("Loading AppShell…", muted=True)
                     self.outlet_id = region.id
-        with ui.container(css_class="as-footer"):
+        with ui.container(css_class="as-footer", attrs={"role": "status", "aria-live": "polite"}):
             ui.text(self.status_state, muted=True)
-        ui.raw_html('''<dialog id="as-confirm" aria-labelledby="as-confirm-title">
+        ui.raw_html('''<dialog id="as-confirm" aria-labelledby="as-confirm-title" aria-describedby="as-confirm-text">
           <h3 id="as-confirm-title">Confirm action</h3><p id="as-confirm-text"></p>
           <div class="as-row"><button id="as-confirm-ok" class="as-button" type="button">Confirm</button>
           <button id="as-confirm-cancel" class="as-button" type="button">Cancel</button></div>
           </dialog>''')
         ui.mount(app)
         self.doc = ui.document
-        self.doc.on("click", self._on_nav_click, element=self.nav_id)
-        self.doc.on("click", self._on_content_click, element=self.outlet_id)
-        self.doc.on("click", self._on_confirm_click, element="as-confirm")
+        post = self.ui.post
+        self.doc.on("click", lambda event: post(self._on_nav_click, event), element=self.nav_id)
+        self.doc.on("click", lambda event: post(self._on_content_click, event), element=self.outlet_id)
+        self.doc.on("click", lambda event: post(self._on_confirm_click, event), element="as-confirm")
+        # Confirm, Cancel and Escape all end in the dialog's close event.
+        self.doc.on("close", lambda event: post(self._on_confirm_closed, event), element="as-confirm")
         self.show_home()
         self.executor.submit(self._background_boot)
 
@@ -90,6 +98,8 @@ class Desktop:
             chunks.append(f'<button type="button" class="as-nav-link {active}" id="{eid}">{esc(page["title"])}</button>')
         self.nav_items = {f"as-nav-{i}": (ident, page["id"])
                           for i, (ident, page) in enumerate(self.runtime.get_pages())}
+        if self.selected is not None and self.selected not in self.nav_items.values():
+            self.selected = None
         try:
             self.doc.replace_html(self.nav_id, "".join(chunks))
         except Exception:
@@ -183,7 +193,7 @@ class Desktop:
 
     def _on_nav_click(self, event: dict) -> None:
         for identifier in [event.get("element", ""), *event.get("path", [])]:
-            if identifier in getattr(self, "nav_items", {}):
+            if identifier in self.nav_items:
                 self.show_page(*self.nav_items[identifier])
                 return
 
@@ -220,21 +230,39 @@ class Desktop:
                 values = {}
                 for name, (element, kind) in self.active_view.fields.items():
                     values[name] = self.doc.get_checked(element) if kind == "checkbox" else self.doc.get_value(element)
+                if self._busy:
+                    self.status_state.set("Another action is still running; wait for it to finish")
+                    return
                 self.pending_command = (self.selected[0], command_id, values, params, self.generation)
                 if command["risk"] != "read":
+                    self._confirm_origin = identifier
                     self.doc.set_text("as-confirm-title", command["title"])
                     self.doc.set_text("as-confirm-text", command["confirmation"])
                     self.doc.show_dialog("as-confirm")
+                    # Explicit initial focus: Cancel for destructive commands, so Enter is safe.
+                    self.doc.focus("as-confirm-cancel" if command["risk"] == "destructive" else "as-confirm-ok")
                 else:
                     self._dispatch_action()
                 return
 
     def _on_confirm_click(self, event: dict) -> None:
         if event.get("element") == "as-confirm-cancel":
-            self.pending_command = None
-            self.doc.close_dialog("as-confirm")
+            self.doc.close_dialog("as-confirm", "cancel")
         elif event.get("element") == "as-confirm-ok":
-            self.doc.close_dialog("as-confirm")
+            self.doc.close_dialog("as-confirm", "ok")
+
+    def _on_confirm_closed(self, event: dict) -> None:
+        confirmed = event.get("return_value") == "ok"
+        origin, self._confirm_origin = self._confirm_origin, None
+        if not confirmed:
+            self.pending_command = None
+            self.status_state.set("Cancelled")
+        if origin and self.active_view and origin in self.active_view.buttons:
+            try:
+                self.doc.focus(origin)  # give keyboard focus back to the button that asked
+            except Exception:
+                pass
+        if confirmed:
             self._dispatch_action()
 
     def _dispatch_action(self) -> None:
@@ -270,6 +298,6 @@ class Desktop:
         except Exception as exc:
             self.status_state.set(f"Install request failed: {exc}")
 
-    def close(self) -> None:
+    def close(self, *, clean: bool = True) -> None:
         self.executor.shutdown(wait=False, cancel_futures=True)
-        self.runtime.stop(clean=True)
+        self.runtime.stop(clean=clean)
