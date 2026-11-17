@@ -12,7 +12,7 @@ Registry records: `discovered`, `pending`, `enabled`, `disabled`, `failed`, `act
 | Update extension | Prepare candidate beside old | **Yes** |
 | Startup healthy | Activate selected candidate in registry, maintain previous working bits | No further restart |
 | Candidate worker import or manifest fails | Start previous working release if present; otherwise disable that extension, show error | No (fallback can occur during same startup) |
-| Worker crashes during active session | Mark extension failed, remove/disable its actions, show logs | Recovery on **next** restart |
+| Worker crashes during active session | The request fails with a visible notice (`Outcome unknown … do not retry` for write/destructive commands); nothing is retried. Python starts a fresh worker on the next user request; PowerShell uses a new process per request anyway. Stderr is in `logs/<id>.log` | Extension stays listed; a broken manifest is reported on the next restart |
 | Uninstall | Mark for removal, leave persistent data | **Yes** |
 | Delete data | Separate explicit destructive confirmation; do not delete executable data during crash recovery | After stopping extension |
 

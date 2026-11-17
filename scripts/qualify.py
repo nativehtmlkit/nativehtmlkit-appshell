@@ -8,6 +8,8 @@ from __future__ import annotations
 import ast
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,7 +26,10 @@ REQUIRED = [
     'examples/python/Greeter/pyproject.toml',
     'examples/powershell/Greeter/AppShell.Greeter.psd1',
     'templates/README.md', 'agent/LOCAL-AGENT-PROMPT.md',
-    'docs/12-IMPLEMENTATION.md', 'docs/13-VERIFICATION.md',
+    'docs/12-IMPLEMENTATION.md', 'docs/13-VERIFICATION.md', 'docs/VERIFICATION.md',
+    'python/tests/test_lifecycle.py', 'python/tests/test_desktop_headless.py',
+    'powershell/tests/Lifecycle.Tests.ps1', 'powershell/tests/Desktop.Tests.ps1',
+    'qualification/gui/driver.py', 'scripts/build.py',
 ]
 
 
@@ -43,13 +48,24 @@ def main() -> int:
     for name in ['manifest.schema.json','view.schema.json']:
         schema=json.loads((ROOT/'contracts'/name).read_text(encoding='utf-8'))
         assert schema.get('type')=='object' and '$schema' in schema, name
-    ps_files=list((ROOT/'powershell').rglob('*.ps1'))
+    ps_files=sorted(p for d in ('powershell','examples','qualification') for p in (ROOT/d).rglob('*.ps*1')
+                    if p.suffix in ('.ps1','.psm1','.psd1'))
     for file in ps_files:
         code=file.read_text(encoding='utf-8')
         if 'param([string]$Home' in code or 'param([switch]$SafeMode,[string]$Home' in code:
             raise AssertionError(f'PowerShell $HOME automatic-variable collision: {file}')
-    print(f'PASS: {len(REQUIRED)} required files, Python AST, JSON, {len(ps_files)} PowerShell scripts present')
-    print('Not checked: PowerShell parser, Python native SDK/UI runtime, real native GUI')
+    parsed = 'PowerShell parser not checked (pwsh not found)'
+    if shutil.which('pwsh'):
+        script = ('$bad=0; foreach ($f in $input) { $e=$null; [void][System.Management.Automation.Language.Parser]::ParseFile($f,[ref]$null,[ref]$e); '
+                  'foreach ($x in $e) { $bad++; [Console]::Error.WriteLine($f + ": " + $x.ToString()) } }; exit $bad')
+        result = subprocess.run(['pwsh', '-NoProfile', '-NonInteractive', '-Command', script],
+                                input='\n'.join(str(f) for f in ps_files), text=True)
+        if result.returncode:
+            print('FAIL: PowerShell parse errors', file=sys.stderr)
+            return 1
+        parsed = f'{len(ps_files)} PowerShell files parsed'
+    print(f'PASS: {len(REQUIRED)} required files, Python AST, JSON, {parsed}')
+    print('Not checked here: test suites, native host, real GUI (see docs/VERIFICATION.md)')
     return 0
 
 

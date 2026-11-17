@@ -52,6 +52,19 @@ All editions provide these conceptual operations; only their local-language entr
 
 **PowerShell**: the native module manifest has `PrivateData.AppShell.Id = 'org.example.hello'`, and exports a single `Invoke-AppShellExtension` function with `-Operation`, `-Payload`, `-Context`. `-Payload` is a native hashtable/PSCustomObject with `page_id`, `command_id`, `values`, `params` as appropriate; `-Context` holds the same three context properties. The function returns plain dictionaries/PSCustomObjects for `manifest` and `page`, and optionally `action`. Handler MAY throw; wrapper catches and produces a bounded structured error. `shutdown` is optional. Nothing in the PowerShell module calls Python or uv.
 
+PowerShell output rules (implemented in 0.1.0 and covered by `powershell/tests/Lifecycle.Tests.ps1`):
+
+- The handler's result is the **one** dictionary or PSCustomObject it outputs. Other pipeline output
+  (strings, numbers), `Write-Host`/`Write-Information`, warnings, verbose/debug records,
+  `Write-Error` (non-terminating), `[Console]::Write*` and native command output are appended to the
+  extension log, never to the result. Two dictionaries/PSCustomObjects fail the request.
+- `action` and `shutdown` may output nothing; that is an empty result `{}`.
+- The handler runs with PowerShell's default `$ErrorActionPreference` (`Continue`): use `throw` or
+  `-ErrorAction Stop` to fail a request. `-Payload` and `-Context` arrive as PSCustomObjects
+  (`$Payload.values.message`), with JSON types preserved (booleans, numbers, `$null`, arrays).
+- Each request is a fresh PowerShell process of the same edition; module-scope state does not
+  survive between requests. Persist state under `$Context.data_dir`.
+
 ### Action result
 
 ```json
